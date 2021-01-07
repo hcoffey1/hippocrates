@@ -29,7 +29,7 @@ def run_pass_and_compile(args):
     pass_library = Path(r'${FLUSH_REMOVER_PATH}')
 
     if not pass_library.exists():
-        raise Exception(r'Path ${LLVM_PASS_PATH} does not exist!')
+        raise Exception(r'Path ${FLUSH_REMOVER_PATH} does not exist!')
 
     if 'LLVM_COMPILER_PATH' not in os.environ:
         raise Exception('Please export "LLVM_COMPILER_PATH", as you would for wllvm')

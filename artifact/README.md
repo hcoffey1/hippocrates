@@ -63,6 +63,10 @@ cd build
 cmake ..
 
 make PMFIXER -j$(nproc)
+make FLUSHREMOVER -j$(nproc)
+make PMTEST
+# Must build PMEMCHECK before PMINTRINSICS
+make PMEMCHECK
 make PMINTRINSICS
 ```
 
@@ -76,6 +80,8 @@ sudo -H pip3 install -e .
 ```
 
 - pmemcheck:
+
+This should already be built, however if you need to rebuild:
 
 ```
 make PMEMCHECK
@@ -109,6 +115,7 @@ cd build
 make p-clht_example
 
 cd ./deps/RECIPE/P-CLHT/
+extract-bc p-clht_example.bc
 llvm-link-8 p-clht_example.bc --override=../../pmdk/lib/pmdk_debug/libpmem.so.bc \
         --override=../../pmdk/lib/pmdk_debug/libpmemobj.so.bc -o p-clht_example.linked.bc
 ```
@@ -118,6 +125,9 @@ llvm-link-8 p-clht_example.bc --override=../../pmdk/lib/pmdk_debug/libpmem.so.bc
 ```
 cd build
 make REDIS
+# do this if it hasn't been done already
+make FLUSHREMOVER
+make PMTEST
 
 cd ../deps/redis/src
 extract-bc redis-server
