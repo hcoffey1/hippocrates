@@ -115,7 +115,7 @@ cd build
 make p-clht_example
 
 cd ./deps/RECIPE/P-CLHT/
-extract-bc p-clht_example.bc
+extract-bc p-clht_example
 llvm-link-8 p-clht_example.bc --override=../../pmdk/lib/pmdk_debug/libpmem.so.bc \
         --override=../../pmdk/lib/pmdk_debug/libpmemobj.so.bc -o p-clht_example.linked.bc
 ```

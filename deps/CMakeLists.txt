@@ -107,10 +107,14 @@ set(MP_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/memcached-pmem)
 set(MP_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/memcached-pmem)
 set(MP_BINARY ${MP_INSTALL_DIR}/bin/memcached)
 add_custom_target(MEMCACHED_PMEM
+                   COMMAND aclocal
+                        WORKING_DIRECTORY ${MP_ROOT_DIR}
+                   COMMAND automake
+                        WORKING_DIRECTORY ${MP_ROOT_DIR}
                    COMMAND CC=wllvm 
                            CFLAGS=${MP_CFLAGS} LDFLAGS=${MP_LDFLAGS} #LIBS=${MP_LIBS}
                            ./configure --enable-pslab --prefix=${MP_INSTALL_DIR}
-                   WORKING_DIRECTORY ${MP_ROOT_DIR}
+                        WORKING_DIRECTORY ${MP_ROOT_DIR}
                    COMMAND make CC=wllvm 
                            CFLAGS=${MP_CFLAGS} LDFLAGS=${MP_LDFLAGS} #LIBS=${MP_LIBS}
                            -C ${MP_ROOT_DIR} clean
