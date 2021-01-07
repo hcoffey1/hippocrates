@@ -58,6 +58,8 @@ git submodule update --recursive
 Starting in the root of the repository:
 
 ```
+source build.env
+
 mkdir build
 cd build
 cmake ..
@@ -84,12 +86,16 @@ sudo -H pip3 install -e .
 This should already be built, however if you need to rebuild:
 
 ```
+source build.env
+cd build
 make PMEMCHECK
 ```
 
 - PMDK:
 
 ```
+source build.env
+cd build
 make PMDK
 
 cd ./deps/pmdk/lib/pmdk_debug
@@ -111,6 +117,7 @@ llvm-link-8 memcached.bc -o memcached.linked.bc ../../pmdk/lib/pmdk_debug/libpme
 - RECIPE (P-CLHT)
 
 ```
+source build.env
 cd build
 make p-clht_example
 
@@ -123,7 +130,10 @@ llvm-link-8 p-clht_example.bc --override=../../pmdk/lib/pmdk_debug/libpmem.so.bc
 - Redis:
 
 ```
+# Note: build.env will define the REPO_ROOT variable
+source build.env
 cd build
+
 make REDIS
 # do this if it hasn't been done already
 make FLUSHREMOVER
@@ -143,9 +153,12 @@ The following will be run in two terminals (to collect the trace):
 
 - In the first terminal:
 ```
+# Note: build.env will define the REPO_ROOT variable
+source build.env
 cd ./deps/redis/src/
+
 rm /mnt/pmem/redis.pmem
-~/workspace/pm-bug-fixing/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck \
+$REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck \
         --log-file=redis.log ./redis-server-noflush ../../redis-pmem.conf
 ```
 
@@ -266,12 +279,16 @@ To reproduce the RECIPE bugs, do the following:
 
 1. First, generate the bug report using pmemcheck:
 ```
-~/workspace/pm-bug-fixing/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=recipe.log ./deps/RECIPE/P-CLHT/p-clht_example 100 1
-~/workspace/pm-bug-fixing/build/parse-trace pmemcheck recipe.log -o recipe.trace
+source build.env
+cd build
+
+./deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=recipe.log ./deps/RECIPE/P-CLHT/p-clht_example 100 1
+./build/parse-trace pmemcheck recipe.log -o recipe.trace
 ```
 
 2. Apply Hippocrates to fix the bugs:
 ```
+source build.env
 cd build
 
 ./apply-fixer ./deps/RECIPE/P-CLHT/p-clht_example.linked.bc recipe.trace -o ./deps/RECIPE/P-CLHT/fixed --cxx --extra-opt-args="-fix-summary-file=recipe_summary.txt -heuristic-raising -trace-aa"
@@ -280,12 +297,12 @@ cd build
 3. Rerun pmemcheck and generate a new bug report:
 ```
 rm -f /mnt/pmem/pool 
-~/workspace/pm-bug-fixing/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=recipe_fixed.log ./deps/RECIPE/P-CLHT/fixed 100 1
+./deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=recipe_fixed.log ./deps/RECIPE/P-CLHT/fixed 100 1
 ```
 
 4. Confirm the bug report is empty, thus confirming the bugs are fixed:
 ```
-~/workspace/pm-bug-fixing/build/parse-trace pmemcheck recipe_fixed.log -o recipe_fixed.trace
+./parse-trace pmemcheck recipe_fixed.log -o recipe_fixed.trace
 ```
 
 This should produce output similar to the following:
@@ -318,8 +335,9 @@ To reproduce the memcached-pm bugs manually, do the following:
 1. First, find the bugs and generate a pmemcheck trace:
 
 ```
+source build.env
 cd build/deps/memcached/bin
-LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) ~/workspace/pm-bug-fixing/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached.log ./memcached -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool,pslab_size=8,pslab_force
+LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached.log ./memcached -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool,pslab_size=8,pslab_force
 ```
 
 In a second terminal:
@@ -343,8 +361,9 @@ cd build
 
 3. Repeat steps 1, except using the fixed binary. Then confirm the new binary does not have any bugs:
 ```
+source build.env
 cd build/deps/memcached/bin
-LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) ~/workspace/pm-bug-fixing/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached_fixed.log ./memcached-fixed -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool,pslab_size=8,pslab_force
+LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached_fixed.log ./memcached-fixed -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool,pslab_size=8,pslab_force
 
 # --- Follow the same steps in a second terminal
 
