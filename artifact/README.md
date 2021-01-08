@@ -143,44 +143,7 @@ cd ../deps/redis/src
 extract-bc redis-server
 llvm-link-8 redis-server.bc --override=../../../build/deps/pmdk/lib/pmdk_debug/libpmem.so.bc \
         --override=../../../build/deps/pmdk/lib/pmdk_debug/libpmemobj.so.bc -o redis-server.linked.bc
-
-# This creates the baseline for the redis experiment
-cd -
-./remove-flushes ../deps/redis/src/redis-server.linked.bc -o ../deps/redis/src/redis-server-noflush -s
 ```
-
-The following will be run in two terminals (to collect the trace):
-
-- In the first terminal:
-```
-# Note: build.env will define the REPO_ROOT variable
-source build.env
-cd ./deps/redis/src/
-
-rm /mnt/pmem/redis.pmem
-$REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck \
-        --log-file=redis.log ./redis-server-noflush ../../redis-pmem.conf
-```
-
-- In the second terminal:
-```
-telnet localhost 6380
-> set foo bar
-...
-> shutdown
-```
-
-After collecting the trace:
-
-```
-./parse-trace pmemcheck ../deps/redis/src/redis.log -o ../deps/redis/src/redis.trace
-
-./apply-fixer ../deps/redis/src/redis-server-noflush.bc ../deps/redis/src/redis_noflush.trace -o ../deps/redis/src/redis-server-trace --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_summary.txt -heuristic-raising -trace-aa"
-
-./apply-fixer ../deps/redis/src/redis-server-noflush.bc redis_noflush.trace -o ../deps/redis/src/redis-server-dumb --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_dumb_summary.txt -disable-raising -extra-dumb" 
-
-```
-
 
 ## Results Reproduced
 
@@ -391,6 +354,43 @@ Report written to memcached_fixed.trace
 
 ```
 cd deps/redis/src
+
+# This creates the baseline for the redis experiment
+cd -
+./remove-flushes ../deps/redis/src/redis-server.linked.bc -o ../deps/redis/src/redis-server-noflush -s
+```
+
+The following will be run in two terminals (to collect the trace):
+
+- In the first terminal:
+```
+# Note: build.env will define the REPO_ROOT variable
+source build.env
+cd ./deps/redis/src/
+
+rm /mnt/pmem/redis.pmem
+$REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck \
+        --log-file=redis.log ./redis-server-noflush ../../redis-pmem.conf
+```
+
+- In the second terminal:
+```
+telnet localhost 6380
+> set foo bar
+...
+> shutdown
+```
+
+After collecting the trace:
+
+```
+./parse-trace pmemcheck ../deps/redis/src/redis.log -o ../deps/redis/src/redis.trace
+
+# This creates Redis-Hfull
+./apply-fixer ../deps/redis/src/redis-server-noflush.bc ../deps/redis/src/redis_noflush.trace -o ../deps/redis/src/redis-server-trace --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_summary.txt -heuristic-raising -trace-aa"
+
+# THis creates Redis-H-intra
+./apply-fixer ../deps/redis/src/redis-server-noflush.bc redis_noflush.trace -o ../deps/redis/src/redis-server-dumb --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_dumb_summary.txt -disable-raising -extra-dumb" 
 
 ```
 
