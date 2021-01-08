@@ -88,6 +88,7 @@ This should already be built, however if you need to rebuild:
 ```
 source build.env
 cd build
+make -C $REPO_ROOT/deps/valgrind-pmem clean
 make PMEMCHECK
 ```
 
