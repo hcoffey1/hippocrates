@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.4.3)
 project(PMFixer)
 
+set(CMAKE_BUILD_TYPE "RelWithDebInfo")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g")
 

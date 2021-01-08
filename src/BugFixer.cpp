@@ -991,13 +991,11 @@ bool BugFixer::doRepair(void) {
     FixGenerator *fixer = nullptr;
     switch (trace_.getSource()) {
         case TraceEvent::PMTEST: {
-            PMTestFixGenerator pmtestFixer(module_, pmDesc_.get(), &vMap_);
-            fixer = &pmtestFixer;
+            fixer = new PMTestFixGenerator(module_, pmDesc_.get(), &vMap_);
             break;
         }
         case TraceEvent::GENERIC: {
-            GenericFixGenerator genericFixer(module_, pmDesc_.get(), &vMap_);
-            fixer = &genericFixer;
+            fixer = new GenericFixGenerator(module_, pmDesc_.get(), &vMap_);
             break;
         }
         default: {
@@ -1069,6 +1067,8 @@ bool BugFixer::doRepair(void) {
 
     errs() << "Fixed " << nfixes << " of " << nbugs << " identified! (" 
         << trace_.bugs().size() << " in trace)\n";
+
+    delete fixer;
 
     return modified;
 }
