@@ -233,11 +233,11 @@ class BugReport:
         print(f'(Step 1) Optimized from {len(self.trace)} trace events to {len(new_trace)} trace events.')
         self.trace = new_trace
 
-        # Step 2: Remove redundancies.
+        # Step 2: Remove irrelevant stores.
         '''
-        - This includes things like redundant store locations
-            - For each bug, get the address. Then, for the stores that match that
-            address, remove them
+            First, we get the addresses of all the reported bugs.
+            Then, for stores which don't match the address of a bug, remove
+            the store.
         '''
         unique_bug_addrs = IntervalTree()
         new_trace = []
@@ -253,11 +253,12 @@ class BugReport:
             if a2 is not None:
                 unique_bug_addrs.addi(a2[0], a2[1], True)
 
-        # Now we have the bug addresses. We now remove stores unrelated to those.
+        # Now we have the bug addresses. We now remove stores and flushes
+        #  unrelated to those.
         # We will remove the ranges as we reverse through the list.
         new_trace = []
         for te in reversed(self.trace):
-            if te['event'] != 'STORE':
+            if te['event'] != 'STORE' and te['event'] != 'FLUSH':
                 new_trace += [te]
                 continue
 
