@@ -445,9 +445,16 @@ static list<Value*> getGenericPmValues(
                             pmAddr = pi->getPointerOperand();
                         }
                     }
-                    // errs() << "\tAddr (no cast):" << *pmAddr << "\n";
-                    assert(pmAddr->getType()->isPointerTy());
-                    values.push_back(pmAddr);
+
+                    if (!pmAddr->getType()->isPointerTy()) {
+                        errs() << *pmStore << "\n";
+                        errs() << "\tAddr (no cast):" << *pmAddr << "\n";
+                    } else {
+                        values.push_back(pmAddr);
+                    }
+
+                    // assert(pmAddr->getType()->isPointerTy());
+                    // values.push_back(pmAddr);
                     continue;
                 }
                 // Fall-through, looking for magic VALGRIND number

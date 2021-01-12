@@ -106,6 +106,8 @@ def run_pass_and_compile(args):
             logging.info(f'Fixer mem: {rss / (1024 ** 2)} MB')
             logging.info(f'Fixer return code: {proc.returncode}')
 
+            if proc.returncode:
+                print(' '.join(args))
             assert proc.returncode == 0, 'fixer failed!'
             assert bitcode_opt.exists(), 'nonsense!'
         

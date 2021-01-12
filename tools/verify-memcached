@@ -57,8 +57,9 @@ class MemcachedServer:
         
         self.log_file = self.exe_path.parent / 'memcached.log'
         # Next, assemble the server arguments
-        args = shlex.split(f'{str(PMCHK_PATH)} --tool=pmemcheck --log-file={str(self.log_file)} {str(self.exe_path)} {self.CONFIG_STR}')
-        print(args)
+        argstr = f'{str(PMCHK_PATH)} --tool=pmemcheck --log-file={str(self.log_file)} {str(self.exe_path)} {self.CONFIG_STR}'
+        args = shlex.split(argstr)
+        print(argstr)
         self.proc = subprocess.Popen(args, env=ENV, stdout=DEVNULL, stderr=DEVNULL)
 
         # Make sure it's up and running
@@ -153,7 +154,8 @@ def apply_trace(bitcode_path, exe_path, trace_file):
 
     summary_file = exe_path.parent / 'memcached_summary.txt'
     
-    aa_str = '-heuristic-raising -trace-aa '
+    # aa_str = '-heuristic-raising -trace-aa '
+    aa_str = '-heuristic-raising '
     fixer_arg_str = (f'{str(fixer_script)} {str(bitcode_path)} '
         f'{str(trace_file)} -o {str(exe_path)} --extra-opt-args='
         f'"-fix-summary-file={summary_file} {aa_str}"')

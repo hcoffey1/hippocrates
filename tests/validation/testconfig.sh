@@ -28,14 +28,14 @@
 # To fully test the PMEM codepaths it is strongly recommended to configure
 # DEVICE_DAX_PATH as well.
 #
-PMEM_FS_DIR=/tmp
+PMEM_FS_DIR=/tmp/$(whoami)
 
 #
 # For tests that require true a non-persistent memory aware file system (i.e.
 # to verify something works on traditional page-cache based memory-mapped
 # files) set the path to a directory on a normal file system here.
 #
-NON_PMEM_FS_DIR=/tmp
+NON_PMEM_FS_DIR=/tmp/$(whoami)
 
 #
 # If you don't have real PMEM or PMEM emulation set up and/or the filesystem

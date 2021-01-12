@@ -246,8 +246,9 @@ To reproduce the RECIPE bugs, do the following:
 source build.env
 cd build
 
+rm /mnt/pmem/pool
 ./deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=recipe.log ./deps/RECIPE/P-CLHT/p-clht_example 100 1
-./build/parse-trace pmemcheck recipe.log -o recipe.trace
+./parse-trace pmemcheck recipe.log -o recipe.trace
 ```
 
 2. Apply Hippocrates to fix the bugs:
@@ -301,7 +302,7 @@ To reproduce the memcached-pm bugs manually, do the following:
 ```
 source build.env
 cd build/deps/memcached/bin
-LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached.log ./memcached -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool,pslab_size=8,pslab_force
+LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached.log ./memcached -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
 ```
 
 In a second terminal:
@@ -327,7 +328,7 @@ cd build
 ```
 source build.env
 cd build/deps/memcached/bin
-LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached_fixed.log ./memcached-fixed -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool,pslab_size=8,pslab_force
+LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached_fixed.log ./memcached-fixed -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
 
 # --- Follow the same steps in a second terminal
 
@@ -369,9 +370,9 @@ The following will be run in two terminals (to collect the trace):
 source build.env
 cd ./deps/redis/src/
 
-rm /mnt/pmem/redis.pmem
+rm -f /mnt/pmem/redis-$(whoami).pmem 
 $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck \
-        --log-file=redis.log ./redis-server-noflush ../../redis-pmem.conf
+        --log-file=redis.log ./redis-server-noflush ../../redis-pmem.conf --pmfile /mnt/pmem/redis-$(whoami).pmem 1gb
 ```
 
 - In the second terminal:

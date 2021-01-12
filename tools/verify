@@ -85,6 +85,11 @@ class ToolRunner:
 
             Return the fix summary file on success.
         '''
+        # Per-user temp directory
+        import getpass
+        tmp_dir = Path(f'/tmp/{getpass.getuser()}')
+        if not tmp_dir.exists():
+            tmp_dir.mkdir()
 
         # Need to set the PATH so the scripts can find the pmemcheck tool
         new_env = deepcopy(os.environ)

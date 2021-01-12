@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 from copy import deepcopy
 from IPython import embed
+from multiprocessing import cpu_count
 from pathlib import Path
 from progress.bar import ChargingBar as Bar
 from tempfile import TemporaryDirectory
@@ -20,6 +21,15 @@ import subprocess
 import sys
 import yaml
 
+def get_open_port():
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("",0))
+    s.listen(1)
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
 class RedisServer:
 
     PMFILE_RE = re.compile(r'^pmfile (\S+) \S+')
@@ -32,6 +42,10 @@ class RedisServer:
 
         self.dir = dir
         self.config_file = config_file
+
+        # Get a free port
+        # https://stackoverflow.com/questions/2838244/get-open-tcp-port-in-python/2838309#2838309
+        self.port = get_open_port()
 
         self.env = deepcopy(os.environ)
         # Some PMDK defs.
@@ -56,6 +70,7 @@ class RedisServer:
             self.proc.terminate()
 
     def start(self, server):
+        import getpass
         binary = self.dir / 'src' / server
         assert binary.exists(), f'{str(binary)} not found!'
 
@@ -64,7 +79,10 @@ class RedisServer:
             self.pmfile.unlink()
         
         # Next, assemble the server arguments
-        args = shlex.split(f'numactl -N 1 -m 1 {str(binary)} {str(self.config_file)}')
+        args = shlex.split(
+            (f'numactl -N 1 -m 1 {str(binary)} {str(self.config_file)} --pmfile'
+            f' /mnt/pmem/redis-{getpass.getuser()}.pmem 1gb --port {self.port}')
+        )
         self.proc = subprocess.Popen(args, stdout=DEVNULL, stderr=DEVNULL)
         # self.proc = subprocess.Popen(args)
 
@@ -72,7 +90,7 @@ class RedisServer:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
-                s.connect(('localhost', 6379))
+                s.connect(('localhost', self.port))
                 s.sendall('PING\r\n'.encode())
                 resp = s.recv(1024).decode()
                 assert resp == '+PONG\r\n', f'"{resp}" is invalid!'
@@ -108,16 +126,21 @@ class YCSBRunner:
             yield f'workload{x}'
 
     # NOPS = 1000000
-    NREC = 10000
-    NOPS = 100
+    # --- These configs work, but look bad
+    # NREC = 10000
+    # NOPS = 100
+    # --- These configs make us look bad
+    # NREC = 1000000
+    # NOPS = 1000000
+    # ---
+    NREC = 1000000
+    NOPS = 100000
+
     NTHREADS = 1
-    PARAMS = ('-p "redis.host=127.0.0.1" -p "redis.port=6379" '
-              f'-p "recordcount={NREC}" -p "operationcount={NOPS * NTHREADS}" '
-              f'-threads {NTHREADS}')
 
     TP_RE = re.compile(r'\[OVERALL\], Throughput\(ops/sec\), (\S+)')
 
-    def __init__(self, dir):
+    def __init__(self, dir, port):
         assert isinstance(dir, Path), 'dir must be a path!'
         assert dir.exists(), f'{str(dir)} does not exist!'
         self.dir = dir
@@ -128,15 +151,29 @@ class YCSBRunner:
         self.workload_dir = self.dir / 'workloads'
         assert self.workload_dir.exists(), f'{str(self.workload_dir)} not found!'
 
+        self.PARAMS = (f'-p "redis.host=127.0.0.1" -p "redis.port={port}" '
+              f'-p "recordcount={self.NREC}" -p "operationcount={self.NOPS * self.NTHREADS}" '
+              f'-threads {self.NTHREADS}')
+        
+        self.LOAD_PARAMS = (f'-p "redis.host=127.0.0.1" -p "redis.port={port}" '
+              f'-p "recordcount={self.NREC}" -threads {cpu_count()}')
+
     def _do_command(self, workload, command):
         bin_str = str(self.ycsb_bin)
         workload_str = str(self.workload_dir / workload)
-        arg_str = f'numactl -m 0 -N 0 {bin_str} {command} redis -s -P {workload_str} {self.PARAMS}'
+
+        if command == 'load':
+            arg_str = f'numactl -m 1 -N 1 {bin_str} {command} redis -s -P {workload_str} {self.LOAD_PARAMS}'
+        else:
+            arg_str = f'numactl -m 1 -N 1 {bin_str} {command} redis -s -P {workload_str} {self.PARAMS}'
+
         args = shlex.split(arg_str)
 
         res = subprocess.run(args, cwd=self.dir, stdout=PIPE, stderr=STDOUT)
         # res = subprocess.run(args, cwd=self.dir)
         # res.check_returncode()
+        # embed()
+        # exit()
 
         output = res.stdout.decode()
         for line in output.split('\n'):
@@ -155,41 +192,46 @@ class YCSBRunner:
         ''' Returns throughtput. '''
         return self._do_command(workload, 'run')
 
-def run_experiment(redis, ycsb, server, workload, trial, df):
-    redis.start(server)
-
-    load_tp = ycsb.load(workload)
-    run_tp = ycsb.run(workload)
-
-    load_data = {'Server': server, 'Workload': workload, 'Command': 'load', 
-                 'Trial': trial, 'Throughput': load_tp}
-    run_data = {'Server': server, 'Workload': workload, 'Command': 'run', 
-                'Trial': trial, 'Throughput': run_tp}
-
-    x = df.append(load_data, ignore_index=True)
-    x = x.append(run_data, ignore_index=True)
-
-    redis.shutdown(False)
-
-    return x
 
 def run(args):
 
     df = pd.DataFrame(columns=['Server', 'Command', 'Workload', 'Trial', 'Throughput'])
 
     redis = RedisServer(args.redis_directory, args.config_file)
-    ycsb = YCSBRunner(args.ycsb_directory)
 
-    nitems = len(list(redis.servers())) * len(list(ycsb.workloads())) * args.trials
+    YCSBRunner.NOPS = args.nops
+    YCSBRunner.NREC = args.nrecords
+    ycsb = YCSBRunner(args.ycsb_directory, redis.port)
+
+    # +1 for LOAD
+    nitems = len(list(redis.servers())) * (len(list(ycsb.workloads()))) * args.trials
 
     TheBar = lambda: Bar('Running Tests', suffix='[%(index)d/%(max)d] ETA: %(eta)ds', max=nitems)
 
     with TheBar() as bar:
         for server in redis.servers():
-            for workload in ycsb.workloads():
-                for trial in range(args.trials):
-                    df = run_experiment(redis, ycsb, server, workload, trial, df)
+            # Just load once
+            # print('starting!')
+            redis.start(server)
+            # print('started!')
+            # -- shouldn't matter
+            load_tp = ycsb.load('workloada')
+            load_data = {'Server': server, 'Workload': 'workloada', 'Command': 'load', 
+                'Trial': 0, 'Throughput': load_tp}
+            df = df.append(load_data, ignore_index=True)
+            # bar.next()
+
+            for trial in range(args.trials):
+                for workload in ycsb.workloads():    
+                    run_tp = ycsb.run(workload)
+    
+                    run_data = {'Server': server, 'Workload': workload, 'Command': 'run', 
+                                'Trial': trial, 'Throughput': run_tp}
+
+                    df = df.append(run_data, ignore_index=True)
                     bar.next()
+
+            redis.shutdown(False)
     
     df.to_csv(args.output_file)
 
@@ -208,6 +250,11 @@ def main():
     parser.add_argument('--trials', '-t', type=int, help='number of trials',
                         default=10)
     parser.add_argument('--servers', '-s', type=str, nargs='+')
+
+    parser.add_argument('--nrecords', type=int, help='Number of records for YCSB database.',
+                        default=YCSBRunner.NREC)
+    parser.add_argument('--nops', type=int, help='Number of operations for YCSB database.',
+                        default=YCSBRunner.NOPS)
 
     args = parser.parse_args()
     assert args.config_file.exists(), f'{str(args.config_file)} does not exist!'

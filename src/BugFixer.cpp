@@ -1146,11 +1146,11 @@ void BugFixer::runTraceAA() {
         }
     }
 
-    errs() << "WLIST " << wlist.size() << "\n";
+    // errs() << "WLIST " << wlist.size() << "\n";
     used.insert(wlist.begin(), wlist.end());
 
     while (true) {
-        errs() << "Currently " << used.size() << "\n";
+        // errs() << "Currently " << used.size() << "\n";
         unordered_set<Value*> next;
         // Also add the users of the function as needed
         for (auto *v : used) {
@@ -1179,7 +1179,7 @@ void BugFixer::runTraceAA() {
         // Also add the 
 
         if (next.empty()) break;
-        errs() << "\tAdding " << next.size() << '\n';
+        // errs() << "\tAdding " << next.size() << '\n';
 
         used.insert(next.begin(), next.end());
     }
@@ -1193,7 +1193,7 @@ void BugFixer::runTraceAA() {
     }
 
 
-    errs() << nfn << ", remove " << toRemove.size() << "!\n";
+    // errs() << nfn << ", remove " << toRemove.size() << "!\n";
 
     for (Function *f : toRemove) {
         // Rather than actually removing the functions, we strip their
@@ -1219,8 +1219,8 @@ void BugFixer::runTraceAA() {
         }    
     }
 
-    errs() << "added pmv values!\n";
-    errs() << pmDesc_->str() << "\n";
+    // errs() << "added pmv values!\n";
+    // errs() << pmDesc_->str() << "\n";
 }
 
 void BugFixer::runReducedAllocAA() {
