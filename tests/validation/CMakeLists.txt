@@ -428,6 +428,7 @@ add_pmdk_unit_test(TEST_CASE rpmemd_db
 # POST-DE-FACTO
 add_pmdk_unit_test(TEST_CASE obj_first_next
                    TEST_FILE TEST0
+                   TEST_PATCH obj_first_next_TEST0_e71dfa41b.patch
                    COMMIT_HASH e71dfa41b
                    PMDK_PATH ${VALIDATE_PMDK_ROOT_DIR}
                    PMDK_TARGET VALIDATION_PMDK
@@ -436,6 +437,7 @@ add_pmdk_unit_test(TEST_CASE obj_first_next
 
 add_pmdk_unit_test(TEST_CASE obj_first_next
                    TEST_FILE TEST1
+                   TEST_PATCH obj_first_next_TEST1_e71dfa41b.patch
                    COMMIT_HASH e71dfa41b
                    PMDK_PATH ${VALIDATE_PMDK_ROOT_DIR}
                    PMDK_TARGET VALIDATION_PMDK
