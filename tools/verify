@@ -79,6 +79,11 @@ class ToolRunner:
     def _run_pmemcheck(self):
         raise Exception('Not implemented!')
 
+    def _does_not_contain_pmemcheck_bugs(self, logfile):
+        with logfile.open() as f:
+            last_line = f.readlines()[-1]
+            return 'ERROR SUMMARY: 0 errors' in last_line
+
     def _run_pmdk_unit_test(self):
         '''
             Run a PMDK unit test.
@@ -127,8 +132,11 @@ class ToolRunner:
 
         res = subprocess.run(runtests_args, cwd=self.exe_path.parent.parent, 
                              env=new_env, **subproc_kwargs)
-        assert (res.returncode != 0), 'Test was successful, meaning no bugs!'
+
         assert pmemcheck_log.exists(), f'pmemcheck log "{str(pmemcheck_log)}" does not exist!'
+
+        if res.returncode == 0:
+            assert not self._does_not_contain_pmemcheck_bugs(pmemcheck_log), 'Test was successful, meaning no bugs!'
 
         # os.sync()
 
@@ -217,16 +225,7 @@ class ToolRunner:
             print(f'\tSummary file: {summary_file}')
 
         if res.returncode != 1:
-            '''
-            This doesn't necessarily mean there's still bugs, but that some other
-            weird PMDK issue has occured.
-            '''
-            if self.verbose:
-                print('Test failed after applying the fixer! Checking pmemcheck log...')
-            
-            with pmemcheck_log.open() as f:
-                last_line = f.readlines()[-1]
-                assert 'ERROR SUMMARY: 0 errors' in last_line, 'Still has bugs!'
+           assert self._does_not_contain_pmemcheck_bugs(pmemcheck_log), 'Still contains bugs!'
 
         summary_path = Path(summary_file)
         assert summary_path.exists()
