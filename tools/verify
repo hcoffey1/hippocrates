@@ -115,6 +115,10 @@ class ToolRunner:
         if pmemcheck_log.exists():
             pmemcheck_log.unlink()
 
+        # 0.5 Export environment variables continually
+        new_env['UNITTEST_NUM'] = f'{test_num}'
+        new_env['UNITTEST_NAME'] = f'TEST{test_num}'
+
         # 1. Run initial test
         runtests_str = f'./RUNTESTS_{self.exe_path.parent.name}' 
         runtests_args = shlex.split(f'{runtests_str} -b debug -p force-enable {self.exe_path.parent.name} -s {test_file}')
