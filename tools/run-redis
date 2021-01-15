@@ -163,9 +163,9 @@ class YCSBRunner:
         workload_str = str(self.workload_dir / workload)
 
         if command == 'load':
-            arg_str = f'numactl -m 1 -N 1 {bin_str} {command} redis -s -P {workload_str} {self.LOAD_PARAMS}'
+            arg_str = f'numactl -m 0 -N 0 {bin_str} {command} redis -s -P {workload_str} {self.LOAD_PARAMS}'
         else:
-            arg_str = f'numactl -m 1 -N 1 {bin_str} {command} redis -s -P {workload_str} {self.PARAMS}'
+            arg_str = f'numactl -m 0 -N 0 {bin_str} {command} redis -s -P {workload_str} {self.PARAMS}'
 
         args = shlex.split(arg_str)
 
