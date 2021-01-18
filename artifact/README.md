@@ -418,25 +418,27 @@ cd $REPO_ROOT/build
 ./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc $REPO_ROOT/deps/redis/src/redis.trace -o $REPO_ROOT/deps/redis/src/redis-server-trace --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_summary.txt -heuristic-raising"
 
 # This creates Redis-H-intra
-./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc redis.trace -o $REPO_ROOT/deps/redis/src/redis-server-dumb --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_intra_summary.txt -disable-raising -extra-dumb" 
+./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc $REPO_ROOT/deps/redis/src/redis.trace -o $REPO_ROOT/deps/redis/src/redis-server-dumb --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_intra_summary.txt -disable-raising -intra-only" 
 
 ```
 
 Now, run the performance evaluation:
 
-```
-cd build
-./run-redis -t 10 --output-file ../results/test.csv
-# if using prebuilt:
-./run-redis -t 10 --output-file ../results/test.csv -r ../artifact/prebuilt
+```shell
+# --- "source build.env" should have already been run
 
-cd ../results
-./graph.py test.csv test.pdf
+cd $REPO_ROOT/build
+./run-redis -t 10 --output-file $REPO_ROOT/results/test.csv
+# if using prebuilt:
+./run-redis -t 10 --output-file $REPO_ROOT/results/test.csv -r $REPO_ROOT/artifact/prebuilt
+
+cd $REPO_ROOT/results
+./graph.py test.csv --output test.pdf
 ```
 
 This should create a graph similar to Figure 4 in the paper, and should also produce textual output similar to the following:
 
-```
+```s
           Redis$_{H-intra}$  Redis-pmem  Redis$_{H-full}$
 Workload                                                 
 Load               0.215850         1.0          1.003542
@@ -461,9 +463,6 @@ INFO:root:Fixer time: <em>{time in seconds}</em>
 INFO:root:Fixer mem: <em>{memory usage in MB}</em>
 </pre>
 
-- If a command is run with the **full heuristic (Full-AA)**, the command line will end with **`-heuristic-raising`**.
-- If the command is run with the **trace heuristic (Trace-AA)**, the command line will instead end with **`-heuristic-raising -trace-aa`**
-
 Example for PMDK:
 
 <pre>
@@ -471,7 +470,6 @@ Fixer stats for "/usr/lib/llvm-8/bin/opt -load /home/iangneal/workspace/pm-bug-f
 INFO:root:Fixer time: 00:00:05 <b>(5.251097 seconds)</b>                                
 INFO:root:Fixer mem: <b>86.9296875</b> MB
 </pre>
-
 
 
 

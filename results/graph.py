@@ -45,7 +45,7 @@ def prepare(df):
     # Remove servers we don't want
     smap = {
             'redis-server-dumb': r'Redis$_{H-intra}$', 
-            'redis-server': 'Redis-pmem', 
+            'redis-server': 'Redis-pm', 
             'redis-server-trace': r'Redis$_{H-full}$',}
     wmap = {'load': 'Load', 'workloada': 'A', 'workloadb': 'B', 
             'workloadc': 'C', 'workloadd': 'D', 'workloade': 'E', 'workloadf': 'F'}
@@ -86,7 +86,7 @@ def prepare(df):
 def main():
     parser = ArgumentParser()
     parser.add_argument('input_file', type=Path)
-    parser.add_argument('output_file', type=Path)
+    parser.add_argument('--output-file', '-o', type=Path, default=Path('aa.pdf'))
 
     args = parser.parse_args()
     assert args.input_file.exists()
@@ -96,7 +96,7 @@ def main():
     graph(mean_df, ci_df, args.output_file)
 
     # Normalize and print
-    norm = lambda s: s / mean_df['Redis-pmem']
+    norm = lambda s: s / mean_df['Redis-pm']
     pprint(mean_df.apply(norm, axis=0))
     
 if __name__ == '__main__':

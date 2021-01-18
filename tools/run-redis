@@ -71,7 +71,7 @@ class RedisServer:
 
     def start(self, server):
         import getpass
-        binary = self.dir / 'src' / server
+        binary = self.dir / server
         assert binary.exists(), f'{str(binary)} not found!'
 
         # First, remove the old pmfile if it exists
@@ -232,7 +232,7 @@ def main():
     parser.add_argument('--output-file', type=Path, help='Output CSV of data',
                         default=Path('redis_results.csv'),)
     parser.add_argument('--redis-directory', '-r', type=Path, 
-                        default=Path(r'${CMAKE_SOURCE_DIR}/deps/redis'),
+                        default=Path(r'${CMAKE_SOURCE_DIR}/deps/redis/src'),
                         help='Where redis lives')
     parser.add_argument('--ycsb-directory', '-y', type=Path, 
                         default=Path(r'${CMAKE_SOURCE_DIR}/deps/YCSB'),
