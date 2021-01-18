@@ -125,16 +125,8 @@ class YCSBRunner:
         for x in ['a', 'b', 'c', 'd', 'e', 'f']:
             yield f'workload{x}'
 
-    # NOPS = 1000000
-    # --- These configs work, but look bad
-    # NREC = 10000
-    # NOPS = 100
-    # --- These configs make us look bad
-    # NREC = 1000000
-    # NOPS = 1000000
-    # ---
-    NREC = 1000000
-    NOPS = 100000
+    NREC = 10000
+    NOPS = 10000
 
     NTHREADS = 1
 

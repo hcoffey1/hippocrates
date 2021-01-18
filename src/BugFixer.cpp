@@ -20,7 +20,11 @@ cl::opt<bool> DisableFixRaising("disable-raising",
     cl::desc("Indicates whether or not to disable fix raising, which is what "
              "prevents flushes in memcpy/similar calls"));
 
-cl::opt<bool> ExtraDumb("extra-dumb", cl::desc("Use dumb PM mem functions"));
+cl::opt<bool> ExtraDumb("extra-dumb", 
+    cl::desc("Only insert intra-procedural fixes, even when inter-procedural "
+    "fixes would be more efficient. Used to create a baseline for performance evaluations."));
+
+static cl::alias IntraOnly("intra-only", cl::aliasopt(ExtraDumb));
 
 cl::opt<std::string> SummaryFile("fix-summary-file", cl::init("fix_summary.txt"),
     cl::desc("Where to output the fix summary"));

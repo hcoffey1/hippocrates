@@ -72,6 +72,18 @@ make PMEMCHECK
 make PMINTRINSICS
 ```
 
+#### Updating the repository
+
+When updating the repository, to update any of the files generated in the 
+`build` directory, you must rerun the compilation steps to rebuild these files.
+If any of the dependencies are updated, you must rerun the steps listed in 
+"Building Dependencies" section (below).
+
+Note that this also includes updates to scripts in the `tools` directory, as
+they are only copied/configured when the above `make` or `cmake` commands are
+rerun. Just running `git pull` will not automatically apply changes to any
+files in the `build` directory.
+
 ### Building Dependencies
 
 - wllvm (**optional**, only if installing on a new machine):
@@ -81,7 +93,7 @@ cd deps/whole-program-llvm
 sudo -H pip3 install -e . 
 ```
 
-- pmemcheck:
+- `pmemcheck`:
 
 This should already be built, however if you need to rebuild:
 
@@ -128,22 +140,23 @@ llvm-link-8 p-clht_example.bc --override=../../pmdk/lib/pmdk_debug/libpmem.so.bc
         --override=../../pmdk/lib/pmdk_debug/libpmemobj.so.bc -o p-clht_example.linked.bc
 ```
 
-- Redis:
+- Redis-pmem:
 
 ```
 # Note: build.env will define the REPO_ROOT variable
 source build.env
 cd build
 
-make REDIS
+make REDIS -j$(nproc)
 # do this if it hasn't been done already
-make FLUSHREMOVER
-make PMTEST
+make FLUSHREMOVER -j$(nproc)
+make PMEMCHECK -j$(nproc)
+make PMTEST -j$(nproc)
 
-cd ../deps/redis/src
+cd $REPO_ROOT/deps/redis/src
 extract-bc redis-server
-llvm-link-8 redis-server.bc --override=../../../build/deps/pmdk/lib/pmdk_debug/libpmem.so.bc \
-        --override=../../../build/deps/pmdk/lib/pmdk_debug/libpmemobj.so.bc -o redis-server.linked.bc
+llvm-link-8 redis-server.bc --override=$REPO_ROOT/build/deps/pmdk/lib/pmdk_debug/libpmem.so.bc \
+        --override=$REPO_ROOT/build/deps/pmdk/lib/pmdk_debug/libpmemobj.so.bc -o redis-server.linked.bc
 ```
 
 ## Results Reproduced
@@ -354,45 +367,58 @@ Report written to memcached_fixed.trace
 
 1. First, we need to generate the baseline and the log.
 
-```
-cd deps/redis/src
+```shell
+# Start in the root of the repository, e.g. /home/your_username/hippocrates_repo
+# --- Note: build.env will define the REPO_ROOT variable
+source build.env
+cd $REPO_ROOT/build
 
 # This creates the baseline for the redis experiment
-cd -
-./remove-flushes ../deps/redis/src/redis-server.linked.bc -o ../deps/redis/src/redis-server-noflush -s
+./remove-flushes $REPO_ROOT/deps/redis/src/redis-server.linked.bc -o $REPO_ROOT/deps/redis/src/redis-server-noflush -s
 ```
 
-The following will be run in two terminals (to collect the trace):
+- The following will be run in two terminals (to collect the trace):
 
-- In the first terminal:
-```
-# Note: build.env will define the REPO_ROOT variable
+```shell
+# TERMINAL 1
+# --- Start in the root of the repository, e.g. /home/your_username/hippocrates_repo
 source build.env
-cd ./deps/redis/src/
+cd $REPO_ROOT/deps/redis/src/
 
 rm -f /mnt/pmem/redis-$(whoami).pmem 
 $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck \
         --log-file=redis.log ./redis-server-noflush ../../redis-pmem.conf --pmfile /mnt/pmem/redis-$(whoami).pmem 1gb
+# Wait until Redis displays the following:
+> ... * The server is now ready to accept connections on port 6380
 ```
 
-- In the second terminal:
-```
+```shell
+# TERMINAL 2
+# --- Start in the root of the repository, e.g. /home/your_username/hippocrates_repo
+source build.env
+
 telnet localhost 6380
 > set foo bar
-...
+# ... (repeat set commands as much as you want)
 > shutdown
 ```
 
-After collecting the trace:
+- This creates a `pmemcheck` log, `$REPO_ROOT/deps/redis/src/redis.log`
 
-```
-./parse-trace pmemcheck ../deps/redis/src/redis.log -o ../deps/redis/src/redis.trace
+- After collecting the trace, run the following in either terminal:
 
-# This creates Redis-Hfull
-./apply-fixer ../deps/redis/src/redis-server-noflush.bc ../deps/redis/src/redis_noflush.trace -o ../deps/redis/src/redis-server-trace --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_summary.txt -heuristic-raising -trace-aa"
+```shell
+# --- "source build.env" should have already been run
+cd $REPO_ROOT/build
 
-# THis creates Redis-H-intra
-./apply-fixer ../deps/redis/src/redis-server-noflush.bc redis_noflush.trace -o ../deps/redis/src/redis-server-dumb --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_dumb_summary.txt -disable-raising -extra-dumb" 
+# This creates a trace file from the pmemcheck log, which is what Hippocrates uses to locate where to insert bug fixes
+./parse-trace pmemcheck $REPO_ROOT/deps/redis/src/redis.log -o $REPO_ROOT/deps/redis/src/redis.trace
+
+# This creates Redis-H-full
+./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc $REPO_ROOT/deps/redis/src/redis.trace -o $REPO_ROOT/deps/redis/src/redis-server-trace --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_summary.txt -heuristic-raising"
+
+# This creates Redis-H-intra
+./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc redis.trace -o $REPO_ROOT/deps/redis/src/redis-server-dumb --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_intra_summary.txt -disable-raising -extra-dumb" 
 
 ```
 
