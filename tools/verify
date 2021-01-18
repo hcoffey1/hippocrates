@@ -14,6 +14,8 @@ from pathlib import Path
 from pprint import pprint
 from progress.bar import ChargingBar as Bar
 from subprocess import DEVNULL, PIPE, STDOUT
+from time import sleep  
+from types import MethodType as method, ModuleType as module
 
 import os
 import shlex
@@ -38,28 +40,6 @@ class ToolTypes(Enum):
 class TestResult(Enum):
     PASS = auto()
     FAIL = auto()
-
-# https://blog.ruanbekker.com/blog/2019/02/19/sharing-global-variables-in-python-using-multiprocessing/
-
-class SyncBar(Bar):
-
-    def __init__(self, lock, sync_index, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        assert lock is not None
-        self.lock = lock
-        self.sync_index = sync_index
-
-    def update(self):
-        self.lock.acquire()
-        super().update()
-        self.lock.release()
-
-    def next(self):
-        self.lock.acquire()
-        self.index = self.sync_index.value
-        super().next()
-        self.sync_index.value = self.index
-        self.lock.release()
 
 
 class ToolRunner:
@@ -328,20 +308,27 @@ def run_test(runner):
 
 
 def _run_test_runner_parallel(arg_tuple):
-    r, bar, is_dry_run = arg_tuple
+    r, is_dry_run = arg_tuple
     if is_dry_run:
-        print(f'\tDry run of issue {r.issue}, skip!')
         import time
-        import random
-        time.sleep(random.randint(1, 5))
+        # import random
+        time.sleep(float(r.issue) / 100)
     else:
         # Ignore the summary path.
         run_test(r)
 
+    global lock, bar
+    lock.acquire()
     bar.next()
+    lock.release()
 
     return r.issue
 
+def pool_init(the_bar, bar_lock):
+    global bar, lock
+    bar = the_bar
+    lock = bar_lock
+    bar.start()
 
 def run_all(args, test_list):
     runners = []
@@ -350,15 +337,16 @@ def run_all(args, test_list):
         r.set_compile(not args.disable_compile)
         r.set_verbose(args.verbose)
         if not r.in_suite(args.suite):
-            print(f'{r.target} in suite {r.suite}, skipping')
+            if args.verbose:
+                print(f'{r.target} in suite {r.suite}, skipping')
         else:
             runners += [r]
 
     assert runners, 'No tests to run!'
 
-    CompBar = lambda: Bar(f'Compiling Tests:', suffix='[%(index)d/%(max)d] ETA: %(eta)ds', max=len(runners)) 
+    TheBar = lambda cls, x: cls(f'{x}:', suffix='[%(index)d/%(max)d] ETA: %(eta)ds', max=len(runners)) 
 
-    with CompBar() as bar:
+    with TheBar(Bar, 'Compiling Tests') as bar:
         # Compilation needs to be done in a single-thread
         for r in runners:
             if r.do_compile:
@@ -366,15 +354,30 @@ def run_all(args, test_list):
                 r.do_compile = False
             bar.next()
 
+    SyncManager.register('Bar', Bar)
+
     # Parallelize the actual testing
     with SyncManager() as manager:
+        if args.verbose and args.dry_run:
+            print(f'Parallelized dry run of {len(runners)} items')
 
-        TheBar = lambda: SyncBar(manager.RLock(), manager.Value('d', 0),
-            f'Running Tests:', suffix='[%(index)d/%(max)d] ETA: %(eta)ds', max=len(runners))
+        bar_lock = manager.RLock()
+        bar = TheBar(manager.Bar, 'Running Tests')
+        with Pool(initializer=pool_init, initargs=(bar, bar_lock,)) as p:
+
+            args = [(r, args.dry_run) for r in runners]
+            res = p.map_async(_run_test_runner_parallel, args)
+            while not res.ready():
+                bar_lock.acquire()
+                bar.update()
+                bar_lock.release()
+
+                res.wait(1.0)
+            
+            issues = res.get()
+            assert_is_type(issues, list)
         
-        with TheBar() as bar, Pool() as p:
-            args = [(r, bar, args.dry_run) for r in runners]
-            issues = p.map(_run_test_runner_parallel, args)
+        bar.finish()
     
     issues_resolved = sorted(list(set(issues)))
 
