@@ -24,6 +24,7 @@ import socket
 import subprocess
 import sys
 import yaml
+import getpass
 
 PMCHK_PATH = Path(r'${PMCHK_BIN_DIR}/valgrind')
 assert PMCHK_PATH.exists(), f'{str(PMCHK_PATH)} does not exist!'
@@ -34,17 +35,28 @@ assert PMDK_PATH.exists(), f'Please build PMDK!'
 ENV = deepcopy(os.environ)
 ENV['LD_LIBRARY_PATH'] = str(PMDK_PATH.absolute())
 
-class MemcachedServer:
+def get_open_port():
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("",0))
+    s.listen(1)
+    port = s.getsockname()[1]
+    s.close()
+    return port
 
-    PMEM_FILE = Path('/mnt/pmem/pool')
-    CONFIG_STR = f'-m 0 -U 0 -t 1 -A -o pslab_file={str(PMEM_FILE)},pslab_size=8,pslab_force'
-    PORT = 11211
+VERBOSE = False
+
+class MemcachedServer:
 
     def __init__(self, exe_path):
         assert isinstance(exe_path, Path)
         assert exe_path.exists(), f'{str(exe_path)} does not exist!'
 
         self.exe_path = exe_path
+        self.port = get_open_port()
+        self.pmem_file = Path(f'/mnt/pmem/pool-{getpass.getuser()}')
+        self.config_str = (f'-m 0 -U 0 -t 1 -A -p{self.port} '
+            f'-o pslab_file={str(self.pmem_file)},pslab_size=8,pslab_force')
 
     def __del__(self):
         if hasattr(self, 'proc'):
@@ -52,21 +64,29 @@ class MemcachedServer:
 
     def start(self):
         # First, remove the old pmfile if it exists
-        if self.PMEM_FILE.exists():
-            self.PMEM_FILE.unlink()
+        if self.pmem_file.exists():
+            self.pmem_file.unlink()
         
         self.log_file = self.exe_path.parent / 'memcached.log'
+        if self.log_file.exists():
+            self.log_file.unlink()
+
         # Next, assemble the server arguments
-        argstr = f'{str(PMCHK_PATH)} --tool=pmemcheck --log-file={str(self.log_file)} {str(self.exe_path)} {self.CONFIG_STR}'
+        argstr = f'{str(PMCHK_PATH)} --tool=pmemcheck --log-file={str(self.log_file)} {str(self.exe_path)} {self.config_str}'
         args = shlex.split(argstr)
         print(argstr)
-        self.proc = subprocess.Popen(args, env=ENV, stdout=DEVNULL, stderr=DEVNULL)
-
+        if VERBOSE:
+            self.proc = subprocess.Popen(args, env=ENV)
+        else:
+            self.proc = subprocess.Popen(args, env=ENV, stdout=DEVNULL, stderr=DEVNULL)
+        
         # Make sure it's up and running
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         while True:
             try:
-                s.connect(('localhost', self.PORT))
+                if VERBOSE:
+                    print('Trying to connect...')
+                s.connect(('localhost', self.port))
                 s.sendall('PING\r\n'.encode())
                 resp = s.recv(1024).decode()
                 assert resp == 'ERROR\r\n', f'"{resp}" is invalid!'
@@ -125,7 +145,7 @@ def get_trace(exe_path):
     mcd = MemcachedServer(exe_path)
     mcd.start()
 
-    cli = ClientProc(mcd.PORT)
+    cli = ClientProc(mcd.port)
     cli.run(1)
     
     pmemcheck_log = mcd.check_shutdown()
@@ -135,6 +155,10 @@ def get_trace(exe_path):
     parse_script = Path(__file__).parent.absolute() / 'parse-trace'
     assert parse_script.exists(), 'parser not available!'
     trace_file = pmemcheck_log.parent / f'memcached.trace'
+    
+    if trace_file.exists():
+        trace_file.unlink()
+
     parse_arg_str = f'{str(parse_script)} pmemcheck {str(pmemcheck_log)} -o {str(trace_file)}'
     parse_args = shlex.split(parse_arg_str)
     print(f'{parse_arg_str}')
@@ -194,8 +218,12 @@ def main():
     parser.add_argument('--use-prebuilt', '-p', action='store_true', help='Use the pre-built memcached')
     parser.add_argument('--memcached-dir', '-d', type=Path, help='Where the memcached binary is.',
                         default=r'${CMAKE_BINARY_DIR}/deps/memcached-pmem/bin')
+    parser.add_argument('--verbose', '-v', action='store_true')
 
     args = parser.parse_args()
+
+    global VERBOSE
+    VERBOSE = args.verbose
 
     if args.use_prebuilt:
         print('Using prebuilt!')

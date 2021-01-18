@@ -120,7 +120,7 @@ add_custom_target(MEMCACHED_PMEM
                            -C ${MP_ROOT_DIR} clean
                    COMMAND make CC=wllvm 
                            CFLAGS=${MP_CFLAGS} LDFLAGS=${MP_LDFLAGS} #LIBS=${MP_LIBS}
-                           -C ${MP_ROOT_DIR} -j40
+                           -C ${MP_ROOT_DIR} -j$(nproc)
                    COMMAND make CC=wllvm 
                            CFLAGS=${MP_CFLAGS} LDFLAGS=${MP_LDFLAGS} #LIBS=${MP_LIBS}
                            -C ${MP_ROOT_DIR} install

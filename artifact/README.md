@@ -106,7 +106,7 @@ make PMEMCHECK
 
 - PMDK:
 
-```
+```shell
 source build.env
 cd build
 make PMDK
@@ -118,13 +118,13 @@ extract-bc libpmemobj.so
 
 - memcached-pmem
 
-```
+```shell
 source build.env
-cd build
+cd $REPO_ROOT/build
 make MEMCACHED_PMEM
 
-cd ./deps/memcached-pmem/bin/
-llvm-link-8 memcached.bc -o memcached.linked.bc ../../pmdk/lib/pmdk_debug/libpmem.so.bc
+cd $REPO_ROOT/build/deps/memcached-pmem/bin/
+llvm-link-8 memcached.bc -o memcached.linked.bc $REPO_ROOT/build/pmdk/lib/pmdk_debug/libpmem.so.bc
 ```
 
 - RECIPE (P-CLHT)
@@ -298,7 +298,12 @@ Report written to recipe_fixed.trace
 
 #### memcached-pmem bugs
 
-To automate the below process, do the following:
+This assumes you have run the instructions for building memcached-pmem and pmemcheck, which
+you can find above.
+
+
+After building memcached, the bug-fixing process can be automated as follows:
+
 ```
 cd build
 ./verify-memcached --help
