@@ -111,12 +111,12 @@ source build.env
 cd build
 make PMDK
 
-cd ./deps/pmdk/lib/pmdk_debug
+cd $REPO_ROOT/build/deps/pmdk/lib/pmdk_debug
 extract-bc libpmem.so
 extract-bc libpmemobj.so
 ```
 
-- memcached-pmem
+- memcached-pmem (requires PMDK to be built first)
 
 ```shell
 source build.env
@@ -124,7 +124,7 @@ cd $REPO_ROOT/build
 make MEMCACHED_PMEM
 
 cd $REPO_ROOT/build/deps/memcached-pmem/bin/
-llvm-link-8 memcached.bc -o memcached.linked.bc $REPO_ROOT/build/pmdk/lib/pmdk_debug/libpmem.so.bc
+llvm-link-8 memcached.bc -o memcached.linked.bc $REPO_ROOT/build/deps/pmdk/lib/pmdk_debug/libpmem.so.bc
 ```
 
 - RECIPE (P-CLHT)
@@ -304,8 +304,10 @@ you can find above.
 
 After building memcached, the bug-fixing process can be automated as follows:
 
-```
-cd build
+```shell
+source build.env
+cd $REPO_ROOT/build
+
 ./verify-memcached --help
 ./verify-memcached 
 ```
