@@ -150,6 +150,8 @@ def get_trace(exe_path):
     
     pmemcheck_log = mcd.check_shutdown()
 
+    os.sync()
+
     # Now, parse the trace.
     assert pmemcheck_log.exists(), 'Log not created!'
     parse_script = Path(__file__).parent.absolute() / 'parse-trace'
@@ -178,13 +180,16 @@ def apply_trace(bitcode_path, exe_path, trace_file):
 
     summary_file = exe_path.parent / 'memcached_summary.txt'
     
-    # aa_str = '-heuristic-raising -trace-aa '
     aa_str = '-heuristic-raising '
     fixer_arg_str = (f'{str(fixer_script)} {str(bitcode_path)} '
         f'{str(trace_file)} -o {str(exe_path)} --extra-opt-args='
         f'"-fix-summary-file={summary_file} {aa_str}"')
+    print(fixer_arg_str)
     fixer_args = shlex.split(fixer_arg_str)
-    res = subprocess.run(fixer_args)#, stdout=DEVNULL, stderr=DEVNULL)
+    if VERBOSE:
+        res = subprocess.run(fixer_args)
+    else:
+        res = subprocess.run(fixer_args, stdout=DEVNULL, stderr=DEVNULL)
     res.check_returncode()
     assert exe_path.exists(), 'Fixer did not succeed!'
 
@@ -209,7 +214,10 @@ def run(args):
 
     # Check for lack of bugs
     with fixed_trace.open() as f:
-        assert 'is_bug: true' not in f.read()
+        contents = f.read()
+        if 'is_bug: true' in contents and VERBOSE:
+            print(contents)
+        assert 'is_bug: true' not in contents
     print('Fixed!')
     
 
