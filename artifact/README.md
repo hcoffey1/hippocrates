@@ -120,6 +120,10 @@ extract-bc libpmemobj.so
 
 ```shell
 source build.env
+cd $REPO_ROOT/deps/memcached-pmem
+git checkout master
+git pull
+
 cd $REPO_ROOT/build
 make MEMCACHED_PMEM
 
@@ -129,7 +133,7 @@ llvm-link-8 memcached.bc -o memcached.linked.bc $REPO_ROOT/build/deps/pmdk/lib/p
 
 - RECIPE (P-CLHT)
 
-```
+```shell
 source build.env
 cd build
 make p-clht_example

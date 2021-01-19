@@ -107,8 +107,6 @@ set(MP_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/memcached-pmem)
 set(MP_INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/memcached-pmem)
 set(MP_BINARY ${MP_INSTALL_DIR}/bin/memcached)
 add_custom_target(MEMCACHED_PMEM
-                   COMMAND git fetch
-                        WORKING_DIRECTORY ${MP_ROOT_DIR}
                    COMMAND aclocal
                         WORKING_DIRECTORY ${MP_ROOT_DIR}
                    COMMAND automake
