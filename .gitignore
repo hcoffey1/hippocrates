@@ -41,4 +41,5 @@ build/
 *.code-workspace
 
 # Force add results
-results/*.csv
+results/
+build_old
