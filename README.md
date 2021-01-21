@@ -41,7 +41,10 @@ This step is only needed if setting up Hippocrates on a new machine.
 ./install-deps.sh
 ```
 
-#### Setting up the repository (once)
+#### [GitHub] Setting up the repository (once)
+
+Use the instructions in this section if you are cloning the repository from
+GitHub. If you are using the Zenodo archive, skip to the Zenodo instructions below.
 
 After cloning the repository, you need to set up the submodules, which Hippocrates
 depends on for both the LLVM pass and for running tests.
@@ -61,6 +64,19 @@ git submodule deinit --all -f
 git submodule init
 git submodule update --recursive
 ```
+
+#### [Zenodo] Setting up the repository (once)
+
+Only use these instructions if you are using the Zenodo archive.
+
+```shell
+unzip <download>
+cd efeslab-hippocrates-<revision#>
+./zenodo-setup.sh
+```
+
+The `zenodo-setup.sh` script clones the requires submodules without using the
+`git submodule` commands.
 
 #### Compiling Hippocrates
 
