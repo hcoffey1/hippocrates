@@ -344,19 +344,32 @@ cd $REPO_ROOT/build
 The `verify-memcached` can also run over the prebuilt files present in `artifact/prebuilt`
 if you run using the `--use-prebuilt` flag.
 
+For example:
+
+```shell
+source build.env
+cd $REPO_ROOT/build
+
+./verify-memcached --use-prebuilt
+```
+
 To reproduce the memcached-pmem bugs manually, do the following:
 
 1. First, find the bugs and generate a pmemcheck trace:
 
 ```shell
 source build.env
-cd build/deps/memcached-pmem/bin
-LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached.log ./memcached -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
+cd $REPO_ROOT/build/deps/memcached-pmem/bin
+
+LD_LIBRARY_PATH=$(realpath $REPO_ROOT/build/deps/pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached.log ./memcached -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
 ```
 
 In a second terminal:
 ```shell
+source build.env
+
 telnet localhost 11211
+# Commands prefixed with ">" are entered inside of telnet
 > set foo 1 0 3
 > bar
 > shutdown
@@ -364,24 +377,35 @@ telnet localhost 11211
 
 Then parse the trace:
 ```shell
-cd build
+source build.env
+cd $REPO_ROOT/build
+
 ./parse-trace pmemcheck ./deps/memcached-pmem/bin/memcached.log -o ./deps/memcached-pmem/bin/memcached.trace
 ```
 
 2. Then, apply Hippocrates:
 ```shell
+source build.env
+cd $REPO_ROOT/build
+
 ./apply-fixer ./deps/memcached-pmem/bin/memcached.linked.bc ./deps/memcached-pmem/bin/memcached.trace -o ./deps/memcached-pmem/bin/memcached-fixed --keep-files --extra-opt-args="-fix-summary-file=memcached_summary_time.txt -heuristic-raising -trace-aa" 
 ```
 
 3. Repeat steps 1, except using the fixed binary. Then confirm the new binary does not have any bugs:
+
 ```shell
+# In terminal 1
 source build.env
-cd build/deps/memcached-pmem/bin
-LD_LIBRARY_PATH=$(realpath ../../pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached_fixed.log ./memcached-fixed -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
+cd $REPO_ROOT/build/deps/memcached-pmem/bin
 
-# --- Follow the same steps in a second terminal
+LD_LIBRARY_PATH=$(realpath $REPO_ROOT/build/pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached_fixed.log ./memcached-fixed -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
+```
 
-cd build
+```shell
+# In terminal 2
+source build.env
+cd $REPO_ROOT/build
+
 ./parse-trace pmemcheck ./deps/memcached-pmem/bin/memcached_fixed.log -o ./deps/memcached-pmem/bin/memcached_fixed.trace
 ```
 
