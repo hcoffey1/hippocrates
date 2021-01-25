@@ -298,7 +298,8 @@ rm /mnt/pmem/pool
 source build.env
 cd build
 
-./apply-fixer ./deps/RECIPE/P-CLHT/p-clht_example.linked.bc recipe.trace -o ./deps/RECIPE/P-CLHT/fixed --cxx --extra-opt-args="-fix-summary-file=recipe_summary.txt -heuristic-raising -trace-aa"
+./apply-fixer ./deps/RECIPE/P-CLHT/p-clht_example.linked.bc recipe.trace -o ./deps/RECIPE/P-CLHT/fixed \
+        --cxx --extra-opt-args="-fix-summary-file=recipe_summary.txt -heuristic-raising -trace-aa"
 ```
 
 3. Rerun pmemcheck and generate a new bug report:
@@ -361,7 +362,10 @@ To reproduce the memcached-pmem bugs manually, do the following:
 source build.env
 cd $REPO_ROOT/build/deps/memcached-pmem/bin
 
-LD_LIBRARY_PATH=$(realpath $REPO_ROOT/build/deps/pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached.log ./memcached -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
+LD_LIBRARY_PATH=$(realpath $REPO_ROOT/build/deps/pmdk/lib/pmdk_debug) \
+        $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck \
+        --log-file=memcached.log ./memcached -m 0 -U 0 -t 1 -A -o \
+        pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
 ```
 
 In a second terminal:
@@ -377,7 +381,8 @@ telnet localhost 11211
 
 Then parse the trace:
 ```shell
-source build.env
+# This can be run in either terminal 1 or 2, but assumes you have run 
+# `source build.env` already.
 cd $REPO_ROOT/build
 
 ./parse-trace pmemcheck ./deps/memcached-pmem/bin/memcached.log -o ./deps/memcached-pmem/bin/memcached.trace
@@ -388,7 +393,9 @@ cd $REPO_ROOT/build
 source build.env
 cd $REPO_ROOT/build
 
-./apply-fixer ./deps/memcached-pmem/bin/memcached.linked.bc ./deps/memcached-pmem/bin/memcached.trace -o ./deps/memcached-pmem/bin/memcached-fixed --keep-files --extra-opt-args="-fix-summary-file=memcached_summary_time.txt -heuristic-raising -trace-aa" 
+./apply-fixer ./deps/memcached-pmem/bin/memcached.linked.bc ./deps/memcached-pmem/bin/memcached.trace \
+        -o ./deps/memcached-pmem/bin/memcached-fixed --keep-files \
+        --extra-opt-args="-fix-summary-file=memcached_summary_time.txt -heuristic-raising -trace-aa" 
 ```
 
 3. Repeat steps 1, except using the fixed binary. Then confirm the new binary does not have any bugs:
@@ -398,7 +405,9 @@ cd $REPO_ROOT/build
 source build.env
 cd $REPO_ROOT/build/deps/memcached-pmem/bin
 
-LD_LIBRARY_PATH=$(realpath $REPO_ROOT/build/pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind --tool=pmemcheck --log-file=memcached_fixed.log ./memcached-fixed -m 0 -U 0 -t 1 -A -o pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
+LD_LIBRARY_PATH=$(realpath $REPO_ROOT/build/pmdk/lib/pmdk_debug) $REPO_ROOT/build/deps/valgrind-pmem/bin/valgrind \
+        --tool=pmemcheck --log-file=memcached_fixed.log ./memcached-fixed -m 0 -U 0 -t 1 -A -o \
+        pslab_file=/mnt/pmem/pool-$(whoami),pslab_size=8,pslab_force
 ```
 
 ```shell
@@ -475,10 +484,14 @@ cd $REPO_ROOT/build
 ./parse-trace pmemcheck $REPO_ROOT/deps/redis/src/redis.log -o $REPO_ROOT/deps/redis/src/redis.trace
 
 # This creates Redis-H-full
-./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc $REPO_ROOT/deps/redis/src/redis.trace -o $REPO_ROOT/deps/redis/src/redis-server-trace --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_summary.txt -heuristic-raising"
+./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc $REPO_ROOT/deps/redis/src/redis.trace \
+        -o $REPO_ROOT/deps/redis/src/redis-server-trace --keep-files --cxx \
+        --extra-opt-args="-fix-summary-file=redis_summary.txt -heuristic-raising"
 
 # This creates Redis-H-intra
-./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc $REPO_ROOT/deps/redis/src/redis.trace -o $REPO_ROOT/deps/redis/src/redis-server-dumb --keep-files --cxx --extra-opt-args="-fix-summary-file=redis_intra_summary.txt -disable-raising -intra-only" 
+./apply-fixer $REPO_ROOT/deps/redis/src/redis-server-noflush.bc $REPO_ROOT/deps/redis/src/redis.trace \
+        -o $REPO_ROOT/deps/redis/src/redis-server-dumb --keep-files --cxx \
+        --extra-opt-args="-fix-summary-file=redis_intra_summary.txt -disable-raising -intra-only" 
 
 ```
 
@@ -510,6 +523,7 @@ E                  0.167548         1.0          1.027780
 F                  0.680404         1.0          0.997616
 ```
 
+Your results may vary, however the trend in the data (i.e., Redis<sub>H-intra</sub> is up to 5-10X worse than either Redis-pmem or Redis<sub>H-full</sub> and Redis<sub>H-full</sub> has around the same or slightly better performance than Redis-pmem) should still hold.
 
 ### 3. Hippocrates's overhead
 
