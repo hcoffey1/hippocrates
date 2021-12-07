@@ -103,6 +103,8 @@ private:
         std::list<FixLoc> originals;
         std::list<llvm::Instruction*> points;
 
+        bool isRaised=false;
+
         /* Methods and constructors */
 
         FixDesc() 

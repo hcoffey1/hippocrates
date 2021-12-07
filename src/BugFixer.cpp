@@ -816,7 +816,7 @@ bool BugFixer::raiseFixLocation(const FixLoc &fl, const FixDesc &desc) {
     while (idx < stack.size()) {
         if (!startInst && !mapper_.contains(stack[idx])) {
             errs() << "LI: " << stack[idx].str() << " NOT CONTAINED\n";
-            raised = true;
+            
             idx++;
             continue;
         }
@@ -849,6 +849,7 @@ bool BugFixer::raiseFixLocation(const FixLoc &fl, const FixDesc &desc) {
             ADD_PERSIST_CALLSTACK_OPT_NOFENCE : ADD_PERSIST_CALLSTACK_OPT;
         auto desc = FixDesc(ft, stack, idx);
         assert(curr && "cannot be null!");
+        desc.isRaised = true;
         success = addFixToMapping(*curr, desc);
     }
 
@@ -1045,11 +1046,24 @@ bool BugFixer::doRepair(void) {
      */
     size_t nbugs = 0;
     size_t nfixes = 0;
+    int interFixes = 0;
+    int intraFixes = 0;
     for (auto &p : fixMap_) {
         bool res = fixBug(fixer, p.first, p.second);
         modified = modified || res;
         nbugs += 1;
         nfixes += (res ? 1 : 0);
+        if(res)
+        {
+            if(p.second.isRaised)
+            {
+                interFixes++;
+            }
+            else
+            {
+                intraFixes++;
+            }
+        }
     }
 
     // errs() << *module_.getFunction("ulog_entry_val_create") << "\n";
@@ -1071,6 +1085,9 @@ bool BugFixer::doRepair(void) {
 
     errs() << "Fixed " << nfixes << " of " << nbugs << " identified! (" 
         << trace_.bugs().size() << " in trace)\n";
+
+    errs() << "Interprocedural fixes : " << interFixes << "\n";
+    errs() << "Intraprocedural fixes : " << intraFixes << "\n";
 
     delete fixer;
 

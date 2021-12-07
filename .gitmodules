@@ -12,7 +12,9 @@
 	url = https://github.com/efeslab/pmdk.git
 [submodule "deps/valgrind-pmem"]
 	path = deps/valgrind-pmem
-	url = https://github.com/efeslab/valgrind.git
+    url = https://github.com/hcoffey1/valgrind
+    #url = https://github.com/pmem/valgrind.git 
+#	url = https://github.com/efeslab/valgrind.git
 [submodule "deps/RECIPE"]
 	path = deps/RECIPE
 	url = https://github.com/efeslab/RECIPE.git

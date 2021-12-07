@@ -294,9 +294,12 @@ class TraceParser:
         nbugs_remaining = None
         last_bug_no = -1
         is_perf = False
-
         bug_re = re.compile(
+            r'==\d+==\s+\[(\d+)\]\s+ at \w+: \S+\(.+\) ==\d+==\s+Address: (\w+)\s+size: (\d+)\s+state: (\w+)')
+            #r'==\d+==\s+\[(\d+)\]\s+ at \w+: \S+ \(.+\) ==\d+==\s+Address: (\w+)\s+size: (\d+)\s+state: (\w+)')
+        bug_re_orig = re.compile(
             r'==\d+==\s+\[(\d+)\]\s+ at \w+: \S+ \(.+\) ==\d+==\s+Address: (\w+)\s+size: (\d+)\s+state: (\w+)')
+
         perf_re = re.compile(
             r'==\d+==\s+\[(\d+)\]\s+ at \w+: \S+ \(.+\) ==\d+==\s+Address: (\w+)\s+size: (\d+)')
 
@@ -367,6 +370,11 @@ class TraceParser:
                     bug_no = None
 
                     if not is_perf:
+                        #Catch errors not in main(), syntax is slightly different
+                        matches = bug_re.match(bug_report)
+                        if(matches == None):
+                            matches = bug_re_orig.match(bug_report)
+
                         matches = bug_re.match(bug_report)
                         assert (matches is not None), f'"{bug_report}" does not match "{bug_re}"'
                         bug_no = int(matches.group(1))

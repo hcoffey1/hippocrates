@@ -664,21 +664,21 @@ void TraceInfoBuilder::resolveLocations(TraceEvent &te) {
         LocationInfo &caller = stack[i];
         LocationInfo &callee = stack[i-1];
 
-        // errs() << "\nCALLER [" << i << "]: " << caller.str() << "\n";
-        // errs() << "CALLEE [" << (i-1) <<"]: " << callee.str() << "\n";
+         //errs() << "\nCALLER [" << i << "]: " << caller.str() << "\n";
+         //errs() << "CALLEE [" << (i-1) <<"]: " << callee.str() << "\n";
         
         if (!caller.valid() || !mapper_.contains(caller)) {
-            // errs() << "SKIP: " << caller.valid() << " " << 
-            //     mapper_.contains(caller) << "\n";
-            // Function *f = mapper_.module().getFunction(caller.function);
-            // if (!f) {
-            //     errs() << "\tnull!\n";
-            //     f = mapper_.module().getFunction("obj_alloc_construct.1488");
-            //     if (!f) errs() << "\t\talso null!\n";
-            //     else errs() << *f << "\n";
-            //     errs() << "DEMANGLES: " << utils::demangle("obj_alloc_construct.1488") << "\n";
-            // }
-            // else errs() << *f << "\n";
+             //errs() << "SKIP: " << caller.valid() << " " << 
+             //    mapper_.contains(caller) << "\n";
+             //Function *f = mapper_.module().getFunction(caller.function);
+             //if (!f) {
+             //    errs() << "\tnull!\n";
+             //    f = mapper_.module().getFunction("obj_alloc_construct.1488");
+             //    if (!f) errs() << "\t\talso null!\n";
+             //    else errs() << *f << "\n";
+             //    errs() << "DEMANGLES: " << utils::demangle("obj_alloc_construct.1488") << "\n";
+             //}
+             //else errs() << *f << "\n";
 
             continue;
         }
@@ -728,14 +728,18 @@ void TraceInfoBuilder::resolveLocations(TraceEvent &te) {
             errs() << "No calls to " << callee.function << "!\n";
         }
 
-        assert(possibleCallSites.size() > 0 && "don't know how to handle!");
+        //assert(possibleCallSites.size() > 0 && "don't know how to handle!");
+        if (possibleCallSites.size() <= 0)
+        {
+            continue;
+        }
         if (possibleCallSites.size() > 1) {
             // If the functions are both the same, it shouldn't matter, 
             // since we're only reseting on the front of the path.
             Function *f = possibleCallSites.front()->getCalledFunction();
             for (auto *cb : possibleCallSites) {
                 Function *called = cb->getCalledFunction();
-                assert(called && called == f);
+                //assert(called && called == f); //:TODO HAYDEN COFFEY : commented this out for now
                 // errs() << "Multiple call sites:" << *cb << "\n";
             }
             // We should be able to do something about this with debug info
