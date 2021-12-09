@@ -816,7 +816,7 @@ bool BugFixer::raiseFixLocation(const FixLoc &fl, const FixDesc &desc) {
     while (idx < stack.size()) {
         if (!startInst && !mapper_.contains(stack[idx])) {
             errs() << "LI: " << stack[idx].str() << " NOT CONTAINED\n";
-            
+            raised=true; 
             idx++;
             continue;
         }
